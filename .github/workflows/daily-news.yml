@@ -1,4 +1,5 @@
 name: Daily News Agent
+# Automated daily news aggregation workflow
 
 on:
   schedule:
