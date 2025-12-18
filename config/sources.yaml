@@ -1,0 +1,127 @@
+# News Agent Configuration
+# Define keywords to filter content and news sources
+
+# Keywords to extract content for (case-insensitive)
+keywords:
+  - artificial intelligence
+  - machine learning
+  - large language models
+  - LLM
+  - AI agents
+  - generative AI
+  - GPT
+  - Claude
+  - Gemini
+  - Image generation
+  - Computer vision
+  - 3D printing
+  - UV printing
+  - Laser engraving
+  - Laser cutting
+  - AI Gadgets
+  - AI
+  # Tech gadgets keywords for crowdfunding
+  - smart device
+  - wearable
+  - thermal
+  - e-ink
+  - handheld
+  - gadget
+  - fitness
+  - gaming
+
+# RSS Feeds
+# limit: max number of most recent entries to fetch (default: 10)
+rss_feeds:
+  - name: TechCrunch AI
+    url: https://techcrunch.com/category/artificial-intelligence/feed/
+    category: tech_news
+    limit: 10
+  
+  - name: MIT Technology Review AI
+    url: https://www.technologyreview.com/feed/
+    category: tech_news
+    limit: 10
+  
+  - name: Hacker News
+    url: https://hnrss.org/frontpage
+    category: tech_community
+    limit: 10
+  
+  - name: ArXiv AI
+    url: https://export.arxiv.org/rss/cs.AI
+    category: research
+    limit: 10
+  
+  - name: The Verge AI
+    url: https://www.theverge.com/rss/ai-artificial-intelligence/index.xml
+    category: tech_news
+    limit: 10
+
+  - name: Google AI Blog
+    url: https://blog.google/technology/ai/rss/
+    category: company_blog
+    limit: 10
+
+  - name: Bambu Lab Blog
+    url: https://blog.bambulab.com/rss/
+    category: company_blog
+    limit: 10
+
+# Web Pages to scrape (for sites without RSS)
+# Note: selector uses Firecrawl's includeTags - CSS selectors like .class, #id, element
+# limit: max number of articles to extract from the page (default: 5)
+web_pages:
+  - name: OpenAI Blog
+    url: https://openai.com/blog
+    selector: article
+    limit: 5
+    category: company_blog
+  
+  - name: Anthropic News
+    url: https://www.anthropic.com/news
+    selector: article
+    limit: 5
+    category: company_blog
+  
+  - name: atomm
+    url: https://www.atomm.com/blog
+    selector: article
+    limit: 5
+    wait_for: 3000
+    category: company_blog
+
+  - name: GitHub Trending
+    url: https://github.com/trending
+    selector: article
+    limit: 5
+    category: developer
+
+  - name: Kickstarter Technology
+    url: https://www.kickstarter.com/discover/categories/technology
+    selector: article
+    limit: 5
+    wait_for: 3000
+    category: crowdfunding
+
+  - name: Indiegogo Tech & Innovation
+    url: https://www.indiegogo.com/en/projects/search/?projectCatalogCategories=Audio%2CCameraGear%2CEducation%2CEnergyAndGreenTech%2CFashionAndWearables%2CFoodAndBeverages%2CHealthAndFitness%2CHome%2CGeneral%2CPhonesAndAccessories%2CProductivity%2CTransportation%2CTravelAndOutdoors&sortType=Default
+    selector: article
+    limit: 5
+    wait_for: 3000
+    category: crowdfunding
+
+
+# Social media configuration (uses Tavily search)
+social_media:
+  platforms:
+    - x.com
+    - reddit.com
+
+# Output settings
+output:
+  format: markdown
+  include_source_links: true
+  max_items_per_source: 10
+  summary_max_words: 150
+

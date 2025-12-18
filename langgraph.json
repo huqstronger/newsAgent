@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "news_agent": "news_agent.graph:graph"
+  },
+  "env": ".env"
+}
