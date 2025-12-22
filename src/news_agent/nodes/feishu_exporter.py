@@ -188,28 +188,29 @@ def batch_create_records(token: str, app_token: str, table_id: str, records: lis
     }
 
 
-def fetch_existing_urls_from_feishu() -> set[str]:
-    """Fetch all existing URLs from Feishu Base for deduplication.
+def fetch_existing_records_from_feishu() -> tuple[set[str], set[str]]:
+    """Fetch all existing URLs and titles from Feishu Base for deduplication.
     
     Returns:
-        Set of URLs that have already been exported to Feishu Base.
+        Tuple of (set of URLs, set of normalized titles) that have already been exported.
     """
     app_token = os.environ.get("FEISHU_BASE_APP_TOKEN", "")
     table_id = os.environ.get("FEISHU_BASE_TABLE_ID", "")
     
     if not app_token or not table_id:
-        print("⚠️  Feishu Base not configured, cannot fetch existing URLs")
-        return set()
+        print("⚠️  Feishu Base not configured, cannot fetch existing records")
+        return set(), set()
     
     token = get_tenant_access_token()
     if not token:
         print("⚠️  Failed to get Feishu access token")
-        return set()
+        return set(), set()
     
     urls: set[str] = set()
+    titles: set[str] = set()
     page_token: str | None = None
     
-    # Paginate through all records to get URLs
+    # Paginate through all records to get URLs and titles
     while True:
         url = f"https://open.feishu.cn/open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/records"
         headers = {"Authorization": f"Bearer {token}"}
@@ -228,6 +229,7 @@ def fetch_existing_urls_from_feishu() -> set[str]:
             records = result.get("data", {}).get("items", [])
             for record in records:
                 fields = record.get("fields", {})
+                # Extract URL
                 url_field = fields.get("URL", {})
                 if isinstance(url_field, dict):
                     link = url_field.get("link", "")
@@ -235,6 +237,12 @@ def fetch_existing_urls_from_feishu() -> set[str]:
                         urls.add(link)
                 elif isinstance(url_field, str):
                     urls.add(url_field)
+                
+                # Extract title (normalize for comparison)
+                title_field = fields.get("Title", "")
+                if title_field:
+                    # Normalize: lowercase, strip whitespace
+                    titles.add(title_field.lower().strip())
             
             # Check for more pages
             has_more = result.get("data", {}).get("has_more", False)
@@ -247,7 +255,17 @@ def fetch_existing_urls_from_feishu() -> set[str]:
             print(f"⚠️  Error fetching records: {e}")
             break
     
-    print(f"📋 Fetched {len(urls)} existing URLs from Feishu Base")
+    print(f"📋 Fetched {len(urls)} existing URLs and {len(titles)} titles from Feishu Base")
+    return urls, titles
+
+
+def fetch_existing_urls_from_feishu() -> set[str]:
+    """Fetch all existing URLs from Feishu Base for deduplication.
+    
+    Returns:
+        Set of URLs that have already been exported to Feishu Base.
+    """
+    urls, _ = fetch_existing_records_from_feishu()
     return urls
 
 

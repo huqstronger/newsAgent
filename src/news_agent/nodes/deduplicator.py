@@ -32,26 +32,34 @@ def load_history_from_file(output_dir: str) -> set[str]:
         return set()
 
 
-def load_history_from_feishu() -> set[str]:
-    """Load previously processed URLs from Feishu Base."""
+def load_history_from_feishu() -> tuple[set[str], set[str]]:
+    """Load previously processed URLs and titles from Feishu Base.
+    
+    Returns:
+        Tuple of (URLs, normalized titles)
+    """
     try:
-        from .feishu_exporter import fetch_existing_urls_from_feishu
-        return fetch_existing_urls_from_feishu()
+        from .feishu_exporter import fetch_existing_records_from_feishu
+        return fetch_existing_records_from_feishu()
     except Exception as e:
         print(f"⚠️  Failed to load history from Feishu: {e}")
-        return set()
+        return set(), set()
 
 
-def load_history(output_dir: str, use_feishu: bool = False) -> set[str]:
-    """Load previously processed URLs.
+def load_history(output_dir: str, use_feishu: bool = False) -> tuple[set[str], set[str]]:
+    """Load previously processed URLs and titles.
     
     Args:
         output_dir: Directory for local history file
         use_feishu: If True, load from Feishu Base instead of local file
+        
+    Returns:
+        Tuple of (URLs, normalized titles)
     """
     if use_feishu:
         return load_history_from_feishu()
-    return load_history_from_file(output_dir)
+    # Local file only stores URLs, no titles
+    return load_history_from_file(output_dir), set()
 
 
 def save_history(output_dir: str, urls: set[str]) -> None:
@@ -81,12 +89,22 @@ def save_history(output_dir: str, urls: set[str]) -> None:
         json.dump(existing, f, indent=2)
 
 
+def normalize_title(title: str) -> str:
+    """Normalize title for comparison."""
+    return title.lower().strip()
+
+
 def deduplicate_items(
     items: list[NewsItem],
     seen_urls: set[str],
+    seen_titles: set[str],
     history_urls: set[str],
+    history_titles: set[str],
 ) -> tuple[list[NewsItem], set[str]]:
     """Remove duplicate items and items already in history.
+    
+    For crowdfunding category, also checks title-based deduplication since
+    the same project may have different URLs (e.g., different tracking params).
 
     Returns:
         Tuple of (deduplicated items, new URLs to add to history)
@@ -96,14 +114,25 @@ def deduplicate_items(
 
     for item in items:
         url = item.url
+        normalized_title = normalize_title(item.title)
 
-        # Skip if already seen in this run
+        # Skip if already seen in this run (by URL)
         if url in seen_urls:
             continue
 
-        # Skip if already processed in previous runs
+        # Skip if already processed in previous runs (by URL)
         if url in history_urls:
             continue
+
+        # For crowdfunding category, also check by title
+        if item.category == "crowdfunding":
+            # Skip if title already seen in this run
+            if normalized_title in seen_titles:
+                continue
+            # Skip if title already in history
+            if normalized_title in history_titles:
+                continue
+            seen_titles.add(normalized_title)
 
         seen_urls.add(url)
         new_urls.add(url)
@@ -122,34 +151,35 @@ def deduplicate_all_sources(state: AgentState, use_feishu_history: bool = False,
     """
     settings = get_settings()
 
-    # Load history of previously processed URLs
-    history_urls = load_history(settings.output_dir, use_feishu=use_feishu_history)
+    # Load history of previously processed URLs and titles
+    history_urls, history_titles = load_history(settings.output_dir, use_feishu=use_feishu_history)
 
-    # Track URLs seen in this run
+    # Track URLs and titles seen in this run
     seen_urls: set[str] = set()
+    seen_titles: set[str] = set()
     all_new_urls: set[str] = set()
 
     # Deduplicate RSS items
     rss_items, new_rss_urls = deduplicate_items(
-        state.rss_items, seen_urls, history_urls
+        state.rss_items, seen_urls, seen_titles, history_urls, history_titles
     )
     all_new_urls.update(new_rss_urls)
 
     # Deduplicate web items
     web_items, new_web_urls = deduplicate_items(
-        state.web_items, seen_urls, history_urls
+        state.web_items, seen_urls, seen_titles, history_urls, history_titles
     )
     all_new_urls.update(new_web_urls)
 
     # Deduplicate social items (X/Twitter & Reddit)
     social_items, new_social_urls = deduplicate_items(
-        state.social_items, seen_urls, history_urls
+        state.social_items, seen_urls, seen_titles, history_urls, history_titles
     )
     all_new_urls.update(new_social_urls)
 
     # Deduplicate newsapi items
     newsapi_items, new_newsapi_urls = deduplicate_items(
-        state.newsapi_items, seen_urls, history_urls
+        state.newsapi_items, seen_urls, seen_titles, history_urls, history_titles
     )
     all_new_urls.update(new_newsapi_urls)
 
